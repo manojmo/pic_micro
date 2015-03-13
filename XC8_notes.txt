@@ -1,0 +1,73 @@
+The __at() needs to be replaced by @, tho the manual says otherwise.
+
+-----------------------
+
+The extension for source and header files is important and case-sensitive.
+A '.C' instead of '.c' resultedin includes not working.
+
+-------------------
+
+Xc8 has a special bit type that actually takes 1 bit unlike bool, which is char
+-----------------
+
+signed to unsigned conversions cause problems like truncation. better stick to one type.
+subtraction operations could lead to -ve values for unsigned, it will be a problem.
+also the compiler seems to truncate "estimated" large long values that "might" overflow,
+e.g. num_exp * 0x010000 gives 0 if num_exp is defined as long, but not as uint8.
+
+------------------------
+
+printf. note that > 16 bit int is long, not int. the format needs to be changed accordingly.
+printf has problems with multiple large %u values in the same string
+it can be cast to and printed as a float, but suddenly, program size increases due to it.
+create a new method to print these ?
+--------------------
+
+There is no single consistent api for all chips to set config values, io modes and read/writes, eeprom access etc.
+The code for each chip has to be different, and the various values have to be looked up from the chips specs.
+This is a pain, and might be the reason people like AVR better.
+
+// PLL with pre-scaler and post-scale options is a way to derive multiple
+// freq from the same source, e.g. for low=6Mhz/high=48Mhz speed USB and for MCU clock
+// Input to PLL has to be 4 Mhz and its output is 96 MHz
+// So, for e.g. if we are using exernal 20 MHz osc, its o/p has to be
+// divided by 5 to get 4 Mhz input for PLL
+// PLLDIV is prescaler, o/p has to be 4MHz
+// CPUDIV and USBDIV are postscalers, input is 96Mhz
+//#pragma config PLLDIV   = 5
+//#pragma config CPUDIV   = OSC1_PLL2
+
+-------------------------
+
+"The $delay is undefined" kind of errors arise if we pass a variable to the delay function.
+it needs a constant.
+
+For __delays, the _XTAL_FREQ should be the cpu freq after all PLL calculations
+
+The "function declared implicit int" and related errors arise due to order of declaration of functions.
+A function must be declared in the code first and called later.
+
+The internal __delay_us/ms() functions call the internla function delay( num_instruction cycles ).
+Note that prescaler is cleared when writing to TIMER register. It would have to be set again.
+So a 1 us delay @ 48 MHz osc means 48 clocks or 48/4 = 12 instructions. If prescaler is 1/4, this means
+that a 1us delay would mean a timer value of 12/4 = 3.
+
+Some links for accurate delays :
+http://www.microchip.com/forums/m409798.aspx ( assembly)
+
+-------------------------
+make[1]: *** [.build-conf] Error 2
+make: *** [.build-impl] Error 2
+:0: error: (500) undefined symbols:
+        _uart_read(dist/default/production/Test.18F4550.X.production.obj) _uart_init(dist/default/production/Test.18F4550.X.production.obj) _uart_start_tx(dist/default/production/Test.18F4550.X.production.obj) _uart_write(dist/default/production/Test.18F4550.X.production.obj) 
+
+The error arises because the c file is not in the source path, tho it is in the include. Error goes away once c file is added under source
+using "add existing item from folders". however, the c file has to be compilable by itself, e.g. cannot use macros that are defined in main.c.
+Also, unless the c file is included as a source file in the project, it cannot include xc.h, which has chip specific functions and __delay.
+since we  want the config to changeable per project, it should not be part of the include file.
+the solution is to use an additional header which holds the defines, and is created at the main.c level, rather than common includes.
+One more option here could be to define the macros in MPLABX compiler preferences for the project.
+another solution : use of a .inc file instead of a .h and .c combi works. Note that in this case, any DEFs that are referenced to,
+must be included before the inclusion of the file. However a major issue is that such a file cannot be included in multiple c files.
+
+The defines like _XTAL_FREQ can be a pain, need to be defined for each .c file using delay ? We can define such macros in the project prefs.
