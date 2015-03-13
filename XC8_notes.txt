@@ -71,3 +71,4 @@ another solution : use of a .inc file instead of a .h and .c combi works. Note t
 must be included before the inclusion of the file. However a major issue is that such a file cannot be included in multiple c files.
 
 The defines like _XTAL_FREQ can be a pain, need to be defined for each .c file using delay ? We can define such macros in the project prefs.
+Global macros for XC8 global options in MPLABX project properties have the format macro=value, e.g. _XTAL_FREQ=48000000
