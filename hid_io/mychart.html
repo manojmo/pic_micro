@@ -1,0 +1,79 @@
+<html>
+<header>
+<script src="hid_io_results_RP.js"></script>
+<script src="Chart.js"></script>
+<script>
+function fnCreateIntervalsData() {
+    var arr = [];
+    numSamples = hid_io_data.length;
+    alert( "numSamples:" + numSamples + ",sampleInterval:" + sampleInterval + ",totalTime_uS:" + (numSamples*sampleInterval) );
+    for( var i=0; i< numSamples; i++ ){
+        arr.push( 0 ); // actually sampleInterval, but it displays garbled due to the small space
+    }
+    return arr;
+}
+
+function fnCountHiLoCnts(){
+	//hid_io_data = [ 0,0,1,1,0,0,1,1,1,1]; Testing
+	var arr_durations = [];
+	var prev_state = 0;
+	var curr_state = 0;
+	var cnt = 0;
+	for( var i=0; i< hid_io_data.length; i++ ){
+		curr_state = hid_io_data[i];
+		if( curr_state == prev_state ){
+			cnt++;
+		}
+		else {
+			arr_durations.push( cnt * sampleInterval);
+			cnt=1;
+		}
+		prev_state = curr_state;
+	}
+	arr_durations.push( cnt * sampleInterval);
+
+	alert( "arr_durations:" + arr_durations );
+}
+
+function fnOnLoad() {
+	fnCountHiLoCnts();
+    var lineChartData = 
+    {
+        labels: fnCreateIntervalsData(), // This is the x-axis
+        datasets: 
+        [
+            {
+                label: "ADC values",
+                fillColor: "rgba(220,220,220,0.2)",
+                strokeColor: "rgba(0,0,220,1)",
+                pointColor: "rgba(220,220,220,1)",
+                pointStrokeColor: "#fff",
+                pointHighlightFill: "#fff",
+                pointHighlightStroke: "rgba(220,220,220,1)",
+                data: hid_io_data // y-axis
+            }
+        ]
+    }
+
+    Chart.defaults.global.animation = false;
+    //Chart.defaults.global.scaleOverride = true;
+
+    // ** Required if scaleOverride is true **
+    // Number - The number of steps in a hard coded scale
+    //Chart.defaults.global.scaleSteps: null
+    // Number - The value jump in the hard coded scale
+    //Chart.defaults.global.scaleStepWidth=sampleInterval;
+    // Number - The scale starting value
+    //scaleStartValue=0;
+
+    // Get the context of the canvas element we want to select
+    var ctx = document.getElementById("myChart").getContext("2d");
+    var myNewChart = new Chart(ctx).Line(lineChartData, {responsive: false});
+}
+</script>
+</header>
+<body onload="fnOnLoad()">
+<canvas id="myChart" width="1000" height="800"></canvas>
+</body>
+</header>
+</html>
