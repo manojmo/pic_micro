@@ -74,5 +74,9 @@ The defines like _XTAL_FREQ can be a pain, need to be defined for each .c file u
 Global macros for XC8 global options in MPLABX project properties have the format macro=value, e.g. _XTAL_FREQ=48000000
 
 -------------------------------
-Timer interrupts seem to be interfering with USB operation, and are better kept off.
+uart-write, USB and timer interrupts can interfere with each other. we could turn off timer in uart_write.
+there are issues with using TIMER0 interrupt along with USB interrupt.
+usb_hal_pic18 defines interrupt config for USB. here IPEN =1, splitting the system into HIGH and LO priority, 
+and assigning USBIP = 1, i.e high priority. This seems to affect TMR0 operation, which is high priority by default.
+The solution is to define TMR0 as low priority, and process it in the low_priority interrupt handler
 
