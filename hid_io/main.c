@@ -23,7 +23,7 @@
 /** INCLUDES *******************************************************/
 #include <system.h>
 #include <system_config.h>
-
+#include <stdio.h>
 #include <usb/usb.h>
 #include <usb/usb_device_hid.h>
 
@@ -32,23 +32,26 @@
 #include <app_led_usb_status.h>
 
 
-
 MAIN_RETURN main(void)
 {
     SYSTEM_Initialize(SYSTEM_STATE_USB_START);
 
     USBDeviceInit();
     USBDeviceAttach();
+    
     uart_init(1);
     uart_start_tx();
-    //ei();
     // there are issues with uart_write when we enable the timer0 interrupts,
     // and prob issues with USB if we enable TIMER1 interrupts
+    INTCON2bits.TMR0IP = 0; // low priority, so it is separate from USB interrupt.
     T0CON = 0b00000001; // internal clock FOSC/4 , 16bit, prescaler = 1/4, Timer disabled
-    TMR0IE = 0; // Enable interupt on overflow
+    INTCONbits.TMR0IE = 1; //  interupt on overflow
+    
     // Use timer1 for delays
-    T1CON = 0b10100001; // internal clock FOSC/4 , prescaler = 1/4, Timer enabled
-    TMR1IE = 0; // Enable interupt on overflow
+    T1CON = 0b00100001; // internal clock FOSC/4 , prescaler = 1/4, Timer disabled
+    TMR1IE = 0; // interupt on overflow
+
+    PEIE = 1; // enable low priority interrupts
 
     while(1)
     {
@@ -106,7 +109,7 @@ bool USER_USB_CALLBACK_EVENT_HANDLER(USB_EVENT event, void *pdata, uint16_t size
         case EVENT_SOF:
             /* We are using the SOF as a timer to time the LED indicator.  Call
              * the LED update function here. */
-            APP_LEDUpdateUSBStatus();
+            //APP_LEDUpdateUSBStatus(); Avoid frequent and unnecessary tasks
             break;
 
         case EVENT_SUSPEND:
@@ -122,6 +125,7 @@ bool USER_USB_CALLBACK_EVENT_HANDLER(USB_EVENT event, void *pdata, uint16_t size
         case EVENT_CONFIGURED:
             /* When the device is configured, we can (re)initialize the demo
              * code. */
+            LATD0 = 1;
             APP_DeviceCustomHIDInitialize();
             break;
 
