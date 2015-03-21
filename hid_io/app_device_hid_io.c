@@ -113,6 +113,7 @@ void APP_DeviceCustomHIDInitialize()
 
 // printf uses this method
 void putch(char data) {
+    TMR0IE = 0; TMR0ON = 0; // Timer intereferes with this, so disable.
     uart_write(data);
 }
 
@@ -137,12 +138,12 @@ void delay_uS( unsigned long times){
 }
 */
 
+/*
 // upto 21845 us only
 void delay_uS( unsigned long times){
     if( times <= 0){
         return;
     }
-    //TMR1IE = 1; // enable timer0 interrupt
     // See timer1 setup. With FOSC = 48Mhz, Ftimer = 12Mhz, prescaler = 4,
     // 3 instruction cycles = 3 timer counts = 1uS.
     // Max uS without overflow = 65535/3 = 21845
@@ -157,22 +158,22 @@ void delay_uS( unsigned long times){
 
     while( TMR1L < end_count_lo || TMR1H < end_count_hi){
     }
-    //t1_expired_times = 0; // reset counter for next delay
-    //TMR1IE = 0; // Disable timer0 interrupt
 }
+*/
 
 
-/*
-const uint16_t MAX_TIMER1_CNT = 21845;
+// we deliberately keep MAX_TIMER1_CNT a bit low, so that we don't have to check for a timer overflow
+const uint16_t MAX_TIMER1_CNT = 20000;
 void delay_uS( unsigned long times){
+    TMR1ON = 1; // enable timer
     while( times > 0){
-        // See timer setup. 3 instruction cycles = 3 timer counts = 1uS.
-        // Max uS without overflow = 65535/3 = 21845
-        TMR1IF = 0;
+        // See timer setup. T0_TICKS_PER_US instruction cycles = T0_TICKS_PER_US timer counts = 1uS.
+        // Max uS without overflow = 65535/T0_TICKS_PER_US
         TMR1H=0;
         TMR1L=0;
+        TMR1IF=0;
         uint16_t curr_times = min( times, MAX_TIMER1_CNT);
-        uint16_t end_count = (curr_times * 3) -3; // -3 : compensate for code exec
+        uint16_t end_count = (curr_times * T0_TICKS_PER_US) -3; // -3 : compensate for code exec
         uint8_t end_count_lo = end_count & 0xFF;
         uint8_t end_count_hi = end_count >>8;
         times = times - curr_times;
@@ -181,10 +182,11 @@ void delay_uS( unsigned long times){
         //printf( "l:%u", end_count_lo);
         //printf( "h:%u", end_count_hi);
         // we need to take care of overflow too
-        while( TMR1IF == 0 && (TMR1L < end_count_lo || TMR1H < end_count_hi) );
+        while( TMR1IF == 0 && ( TMR1L < end_count_lo || TMR1H < end_count_hi) );
     }
+    TMR1ON = 0; // disable timer
 }
-*/
+
 
 // milli sec delay
 void delay_mS( uint24_t times){
@@ -198,33 +200,39 @@ void delay_mS( uint24_t times){
     }
 }
 
-// Interrupt service Routine
-void interrupt myIsr(void)
+// Interrupt service Routine. Should take as less time as possible.
+// system.c already has defined a high-priority isr for usb,
+// use a low priority isr for others
+void interrupt low_priority myLoISR(void)
 {
     // only process timer-triggered interrupts
-    if(TMR0IE && TMR0IF) {
+    if( INTCONbits.TMR0IE && INTCONbits.TMR0IF) {
         t0_expired_times++;
-        TMR0IF = 0; // clear this interrupt condition
+        INTCONbits.TMR0IF = 0; // clear this interrupt condition
     }
-    if( TMR1IE && TMR1IF) {
-        TMR1IF = 0; // clear this interrupt condition
-    }
-
 }
 
 
-void reset_timer(){
+void start_timer(){
     TMR0ON = 1; // enable/start
+    TMR0IE = 1;
     t0_expired_times = 0;
     TMR0H = 0;
     TMR0L = 0;
 }
 
+void stop_timer(){
+    TMR0ON = 0;
+    TMR0IE = 0;
+}
+
 unsigned long get_timer_value(){
+    //printf("t0et:%lu", t0_expired_times);
     uint16_t tmr = TMR0H << 8 | TMR0L;
     unsigned long value = (t0_expired_times * (0x010000)) + tmr;
     return value;
 }
+
 
 uint16_t bytes2_to_int( unsigned char msb, unsigned char lsb){
     uint16_t result = (msb << 8) | lsb;
@@ -301,7 +309,7 @@ void IOPulsedHigh( uint8_t pin_num, long duration, uint16_t pulse_duration,
         uint16_t pulse_high_duration, uint16_t pulse_low_duration, bool is_millis){
     //printf("IOPH,D:%u", duration );
     while( duration > pulse_high_duration){
-        //IOSetPinState( pin_num, 1);
+        IOSetPinState( pin_num, 1);
         is_millis ? delay_mS( pulse_high_duration) : delay_uS(pulse_high_duration);
         IOSetPinState( pin_num, 0);
         is_millis ? delay_mS( pulse_low_duration) : delay_uS(pulse_low_duration);
@@ -311,8 +319,7 @@ void IOPulsedHigh( uint8_t pin_num, long duration, uint16_t pulse_duration,
 }
 
 void IOWritePattern( uint8_t* cmd_args) {
-    uart_write( 'I');
-    reset_timer();
+    start_timer();
     delay_uS(60);
     uint16_t tmv = TMR0H << 8|TMR0L;
     printf( "60ACT:%u\r\n",tmv);
@@ -342,7 +349,7 @@ void IOWritePattern( uint8_t* cmd_args) {
         // the duration will be in uS. A duration of 0 will be ignored if at the start.
         state = 1; // start with HIGH
         for( idx = DURATION_START_INDEX;  idx < 128-1; idx=idx+2 ) {
-            reset_timer();
+            start_timer();
             // combine 2 bytes to form the duration
             duration = cmd_args[idx] << 8;
             duration = duration | cmd_args[idx+1];
@@ -364,7 +371,7 @@ void IOWritePattern( uint8_t* cmd_args) {
             state = ! state;
             curr_duration_num ++;
             unsigned long timer_value_us = get_timer_value()/T0_TICKS_PER_US;
-            TMR0ON = 0;// disable timer.
+            stop_timer();
             printf( "DUR:%u,ACT:%lu,S:%d\r\n", duration, timer_value_us, !state);
         }
         printf( "Rpt\r\n");
