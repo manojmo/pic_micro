@@ -9,7 +9,7 @@ which was independent of protocol, i.e USB/Serial/Other. And to create it as a s
 as possible. Some such items are TODO, i may not get time to finish them. i have used the 18F4550 for this project.
 
 ## Firing the IO commands :
-This is being done using the pyusb framework. The hid_io_test.py file has the code to send the commands
+This is done using the pyusb framework. The hid_io_test.py file has the code to send the commands
 and receive the results. Just as a POC, the results can be saved to a .JS file, and viewed as a chart in mychart.html,
 using the Chart.js framework. That needs to be downloaded separately. The script also has a facility to adjust 
 results, based on expected timing inaccuracies. For the sampling commands, num_samples are specified, and the
@@ -20,7 +20,7 @@ The framework is generic, and the commands accept input like which pin to use, w
 (As a result, accurate timing is an issue. ). There is a debug feature that can return you the actual time taken
 for an interval. (not very exact) routines are provided to measure and execute 2^24 cycle delays. 
 Timings can be specified in uS or mS. There are flags for each command, to provide additional control.
-All sampling commands also specify an IDLE state/value, and samplin does to start until the input changes from
+All sampling commands also specify an IDLE state/value, and sampling does to start until the input changes from
 the IDLE state/value. This is useful for manually-triggered sampling, like reading from a remote.
 
 The commands are
@@ -34,9 +34,9 @@ A reset flag, ms/uS flag, and a repeat flag are also provided.
 This allows us to read `<num_samples>` of HIGH/LOW  states from `<pin_num>` at `<sampleInterval>` intervals. 
 Not well tested. TODO : store the result in bits instead of bytes. A debug flag and mS/uS flag are also provided.
 
-## RP : Read Pin durations :
+## RPD : Read Pin durations :
 This allows us to read `<num_samples>` durations of HIGH/LOWs by sampling `<pin_num>` at intervals of `<sampleInterval>`.
-durations upto FFFF cycles are curently supported. A debug flag, idle-state flag and mS/uS flag are also provided.
+durations upto FFFF cycles are currently supported. A debug flag, idle-state flag and mS/uS flag are also provided.
 This was used to read durations of IR-code from tata-sky remote, but i needed to adjust the values for code-exec
 delays. i have blogged about it here : http://chaukasalshi.blogspot.in/2015/03/pic-micro-remote-for-tata-sky.html
 
