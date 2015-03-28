@@ -25,22 +25,22 @@ the IDLE state/value. This is useful for manually-triggered sampling, like readi
 
 The commands are
 ## WP : Write Pin :
-This allows us to write a pattern to the <pin_num>. A pattern is an array of 2-byte durations, 
+This allows us to write a pattern to the `<pin_num>`. A pattern is an array of 2-byte durations, 
 starting from HI. Currently, upto ~ 60 durations are supported. They end with a zero duration marker. 
 There is a facility to make the HIGHs pulsed at a carrier-freq, as needed for IR codes. 
 A reset flag, ms/uS flag, and a repeat flag are also provided.
 
 ## RP : Read Pin :
-This allows us to read <num_sample> of HIGH/LOW  states from <pin_num> at <sampleInterval> intervals. 
+This allows us to read `<num_samples>` of HIGH/LOW  states from `<pin_num>` at `<sampleInterval>` intervals. 
 Not well tested. TODO : store the result in bits instead of bytes. A debug flag and mS/uS flag are also provided.
 
 ## RP : Read Pin durations :
-This allows us to read <num_sample> durations of HIGH/LOWs by sampling <pin_num> at intervals of <sampleInterval>.
+This allows us to read `<num_samples>` durations of HIGH/LOWs by sampling `<pin_num>` at intervals of `<sampleInterval>`.
 durations upto FFFF cycles are curently supported. A debug flag, idle-state flag and mS/uS flag are also provided.
 This was used to read durations of IR-code from tata-sky remote, but i needed to adjust the values for code-exec
 delays. i have blogged about it here : http://chaukasalshi.blogspot.in/2015/03/pic-micro-remote-for-tata-sky.html
 
 ## RA : Read ADC :
-This allows us to read <num_sample> samples from ADC at intervals of <sampleInterval>. 
+This allows us to read `<num_samples>` samples from ADC at intervals of `<sampleInterval>`. 
 A debug flag, idle-value and mS/uS flag are also provided
 
